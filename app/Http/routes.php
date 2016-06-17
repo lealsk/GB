@@ -1,5 +1,6 @@
 <?php
 
+use App\Match;
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -13,4 +14,18 @@
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::get('match/{key}', function ($key) {
+    $matches = Match::all();
+    if(count($matches) == 0) {
+        $match = factory(App\Match::class)->create(array(
+            "key" => $key
+        ));
+        $match->save();
+        return "WAITING";
+    }
+    $match = $matches->first();
+    $match->delete();
+    return $match->key;
 });
