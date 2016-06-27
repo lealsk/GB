@@ -1,6 +1,7 @@
 <?php
 
 use App\Match;
+use App\User;
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -16,16 +17,45 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('match/{key}', function ($key) {
-    $matches = Match::all();
-    if(count($matches) == 0) {
-        $match = factory(App\Match::class)->create(array(
-            "key" => $key
+Route::get('match/{username}', function ($username) {
+    $user = User::where('name', $username)->first();
+
+    // Creates temporary guest user if not found
+    if(!$user) {
+        $user = factory(App\User::class)->create(array(
+            'name' => $username,
+            'password' => null,
+            'email' => null,
+            'guest' => true
         ));
-        $match->save();
-        return "WAITING";
     }
-    $match = $matches->first();
-    $match->delete();
-    return $match->key;
+
+    // Return current match if found
+    $match = $user->matches()->first();
+    if($match) {
+        return json_encode(array('key' => $match->key, 'player_number' => $match->pivot->player_number));
+    } else {
+        // Find an available match if not found
+        $match = Match::available(2)->first();
+        if($match) {
+            $playerNumber = "2";
+        } else {
+            // Create a new match if not found
+            $key = str_random();
+            $match = factory(App\Match::class)->create(array(
+                'key' => $key
+            ));
+            $match->save();
+            $playerNumber = "1";
+        }
+        $user->matches()->attach($match->id, ['player_number' => $playerNumber]);
+
+        // TODO: Fix for avoiding reconnecting always to the same match. Remove this part once we implement match finished logic
+        if($playerNumber == "2") {
+            $user->matches()->detach($match->id);
+            $match->delete();
+        }
+
+        return json_encode(array('key' => $match->key, 'player_number' => $playerNumber));
+    }
 });

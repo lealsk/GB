@@ -23,4 +23,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+
+    public function matches()
+    {
+        return $this->belongsToMany('App\Match')->withPivot(['player_number']);
+    }
 }
