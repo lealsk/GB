@@ -12,4 +12,9 @@ class Match extends Model
             ->selectRaw('matches.*, count(match_user.user_id) as count')
             ->having('count', '<', $playerCount);
     }
+
+    public function users()
+    {
+        return $this->belongsToMany('App\User')->withPivot(['player_number']);
+    }
 }

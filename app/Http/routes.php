@@ -52,7 +52,7 @@ Route::get('match/{username}', function ($username) {
 
         // TODO: Fix for avoiding reconnecting always to the same match. Remove this part once we implement match finished logic
         if($playerNumber == "2") {
-            $user->matches()->detach($match->id);
+            $match->users()->sync([]);
             $match->delete();
         }
 
