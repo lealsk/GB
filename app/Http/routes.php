@@ -36,6 +36,7 @@ Route::get('match/{username}', function ($username) {
         return json_encode(array('key' => $match->key, 'player_number' => $match->pivot->player_number));
     } else {
         // Find an available match if not found
+        // TODO: Find a better way of supporting more than 2 players per match
         $match = Match::available(2)->first();
         if($match) {
             $playerNumber = "2";
@@ -43,19 +44,42 @@ Route::get('match/{username}', function ($username) {
             // Create a new match if not found
             $key = str_random();
             $match = factory(App\Match::class)->create(array(
-                'key' => $key
+                'key' => $key,
+                'state' => 'WAITING_FOR_PLAYERS'
             ));
             $match->save();
             $playerNumber = "1";
         }
         $user->matches()->attach($match->id, ['player_number' => $playerNumber]);
 
-        // TODO: Fix for avoiding reconnecting always to the same match. Remove this part once we implement match finished logic
-        if($playerNumber == "2") {
-            $match->users()->sync([]);
-            $match->delete();
-        }
-
         return json_encode(array('key' => $match->key, 'player_number' => $playerNumber));
     }
+});
+
+Route::get('match/start/{key}', function ($key) {
+    $match = Match::where('key', $key)->where('state', 'WAITING_FOR_PLAYERS')->first();
+    $match->state = 'STARTED';
+    $match->save();
+});
+
+Route::get('match/end/{key}', function ($key) {
+    $match = Match::where('key', $key)->where('state', 'STARTED')->first();
+    $match->state = 'FINISHED';
+    $match->save();
+});
+
+Route::get('match/cancel/{key}', function ($key) {
+    $match = Match::where('key', $key)->first();
+    $match->state = 'CANCELLED';
+    $match->save();
+});
+
+// TODO: find a better approach for non many vs many matches
+Route::get('match/reset/{key}/{username}', function ($key, $username) {
+    $user = User::where('username', $username)->first();
+
+    $match = Match::where('key', $key)->first();
+    $match->state = 'WAITING_FOR_PLAYERS';
+    $match->users()->sync([$user->id]);
+    $match->save();
 });
