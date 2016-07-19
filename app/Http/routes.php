@@ -58,28 +58,37 @@ Route::get('match/{username}', function ($username) {
 
 Route::get('match/start/{key}', function ($key) {
     $match = Match::where('key', $key)->where('state', 'WAITING_FOR_PLAYERS')->first();
-    $match->state = 'STARTED';
-    $match->save();
+    if($match) {
+        $match->state = 'STARTED';
+        $match->save();
+    }
 });
 
 Route::get('match/end/{key}', function ($key) {
     $match = Match::where('key', $key)->where('state', 'STARTED')->first();
-    $match->state = 'FINISHED';
-    $match->save();
+    if($match) {
+        $match->state = 'FINISHED';
+        $match->save();
+    }
 });
 
 Route::get('match/cancel/{key}', function ($key) {
     $match = Match::where('key', $key)->first();
-    $match->state = 'CANCELLED';
-    $match->save();
+    if($match) {
+        $match->state = 'CANCELLED';
+        $match->save();
+    }
 });
 
 // TODO: find a better approach for non many vs many matches
 Route::get('match/reset/{key}/{username}', function ($key, $username) {
-    $user = User::where('username', $username)->first();
+    $user = User::where('name', $username)->first();
 
     $match = Match::where('key', $key)->first();
-    $match->state = 'WAITING_FOR_PLAYERS';
-    $match->users()->sync([$user->id]);
-    $match->save();
+    if($match) {
+        $match->state = 'WAITING_FOR_PLAYERS';
+        $match->users()->sync([]);
+        $match->users()->attach($user->id, ['player_number' => 1]);
+        $match->save();
+    }
 });
