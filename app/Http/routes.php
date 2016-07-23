@@ -33,14 +33,11 @@ Route::get('match/{username}', function ($username) {
     // Return current match if found
     $match = $user->matches()->first();
     if($match) {
-        return json_encode(array('key' => $match->key, 'player_number' => $match->pivot->player_number));
+        return json_encode(array('key' => $match->key));
     } else {
         // Find an available match if not found
-        // TODO: Find a better way of supporting more than 2 players per match
-        $match = Match::available(2)->first();
-        if($match) {
-            $playerNumber = "2";
-        } else {
+        $match = Match::available()->first();
+        if(!$match) {
             // Create a new match if not found
             $key = str_random();
             $match = factory(App\Match::class)->create(array(
@@ -48,20 +45,29 @@ Route::get('match/{username}', function ($username) {
                 'state' => 'WAITING_FOR_PLAYERS'
             ));
             $match->save();
-            $playerNumber = "1";
         }
-        $user->matches()->attach($match->id, ['player_number' => $playerNumber]);
+        $user->matches()->attach($match->id, ['state' => 'WAITING_FOR_PLAYERS']);
 
-        return json_encode(array('key' => $match->key, 'player_number' => $playerNumber));
+        return json_encode(array('key' => $match->key));
     }
 });
 
-Route::get('match/start/{key}', function ($key) {
-    $match = Match::where('key', $key)->where('state', 'WAITING_FOR_PLAYERS')->first();
+Route::get('match/start/{key}/{username}', function ($key, $username) {
+    $user = User::where('name', $username)->first();
+
+    $match = Match::where('key', $key)->where('state', '!=', ['FINISHED'])->first();
     if($match) {
         $match->state = 'STARTED';
         $match->save();
+
+        $matches = $user->matches();
+        $matches->detach($match->id);
+        $playerNumber = count($match->users()->where('match_user.state', 'PLAYING')->get()) + 1;
+        $matches->attach($match->id, ['state' => 'PLAYING', 'player_number' => $playerNumber]);
+
+        return json_encode(array('player_number' => $playerNumber));
     }
+
 });
 
 Route::get('match/end/{key}', function ($key) {
@@ -76,19 +82,6 @@ Route::get('match/cancel/{key}', function ($key) {
     $match = Match::where('key', $key)->first();
     if($match) {
         $match->state = 'CANCELLED';
-        $match->save();
-    }
-});
-
-// TODO: find a better approach for non many vs many matches
-Route::get('match/reset/{key}/{username}', function ($key, $username) {
-    $user = User::where('name', $username)->first();
-
-    $match = Match::where('key', $key)->first();
-    if($match) {
-        $match->state = 'WAITING_FOR_PLAYERS';
-        $match->users()->sync([]);
-        $match->users()->attach($user->id, ['player_number' => 1]);
         $match->save();
     }
 });

@@ -16,7 +16,8 @@ class CreateMatchUserTable extends Migration
             $table->increments('id');
             $table->integer('match_id')->unsigned();
             $table->integer('user_id')->unsigned();
-            $table->integer('player_number');
+            $table->integer('player_number')->nullable();
+            $table->enum('state', ['WAITING_FOR_PLAYERS', 'PLAYING'])->nullable();
             $table->timestamps();
         });
     }

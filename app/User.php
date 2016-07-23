@@ -26,6 +26,6 @@ class User extends Authenticatable
 
     public function matches()
     {
-        return $this->belongsToMany('App\Match')->withPivot(['player_number']);
+        return $this->belongsToMany('App\Match')->withPivot(['state']);
     }
 }
