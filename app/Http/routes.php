@@ -17,6 +17,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('video-info/{videoId}', function ($videoId) {
+    return file_get_contents("https://www.youtube.com/get_video_info?&video_id={$videoId}&asv=3&el=detailpage&hl=en_US");
+});
+
 Route::get('match/{username}', function ($username) {
     $user = User::where('name', $username)->first();
 
